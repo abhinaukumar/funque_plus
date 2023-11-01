@@ -1,0 +1,9 @@
+git+https://github.com/abhinaukumar/videolib@main
+git+https://github.com/abhinaukumar/qualitylib@main
+scikit-image
+git+https://github.com/rk-exxec/scikit-video@numpy_deprecation  # skvideo compatible with latest numpy 
+opencv-python
+image-similarity-measures[speedups]
+pyfftw
+git+https://github.com/dingkeyan93/DISTS
+git+https://github.com/richzhang/PerceptualSimilarity
