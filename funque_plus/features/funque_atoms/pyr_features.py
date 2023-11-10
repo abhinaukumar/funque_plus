@@ -248,9 +248,9 @@ def ms_ssim_pyr(pyr_ref, pyr_dist, max_val=1, K1=0.01, K2=0.03, pool='cov', full
     C1 = (K1*max_val)**2
     C2 = (K2*max_val)**2
 
-    var_x_cum = np.zeros((details_ref[0][0].shape[0] << 1, details_ref[0][0].shape[1] << 1))
-    var_y_cum = np.zeros((details_ref[0][0].shape[0] << 1, details_ref[0][0].shape[1] << 1))
-    cov_xy_cum = np.zeros((details_ref[0][0].shape[0] << 1, details_ref[0][0].shape[1] << 1))
+    var_x = np.zeros((details_ref[0][0].shape[0] << 1, details_ref[0][0].shape[1] << 1))
+    var_y = np.zeros((details_ref[0][0].shape[0] << 1, details_ref[0][0].shape[1] << 1))
+    cov_xy = np.zeros((details_ref[0][0].shape[0] << 1, details_ref[0][0].shape[1] << 1))
 
     win_dim = 1
     win_size = 1
@@ -262,15 +262,12 @@ def ms_ssim_pyr(pyr_ref, pyr_dist, max_val=1, K1=0.01, K2=0.03, pool='cov', full
         var_y_add = np.stack([subband**2 for subband in detail_level_dist], axis=-1).sum(-1)
         cov_xy_add = np.stack([subband_ref * subband_dist for subband_ref, subband_dist in zip(detail_level_ref, detail_level_dist)], axis=-1).sum(-1)
 
-        var_x_cum = im2col(var_x_cum, 2, 2).sum(0).reshape(var_x_add.shape) + var_x_add
-        var_y_cum = im2col(var_y_cum, 2, 2).sum(0).reshape(var_y_add.shape) + var_y_add
-        cov_xy_cum = im2col(cov_xy_cum, 2, 2).sum(0).reshape(cov_xy_add.shape) + cov_xy_add
+        var_x = im2col(var_x, 2, 2).mean(0).reshape(var_x_add.shape) + var_x_add / win_size
+        var_y = im2col(var_y, 2, 2).mean(0).reshape(var_y_add.shape) + var_y_add / win_size
+        cov_xy = im2col(cov_xy, 2, 2).mean(0).reshape(cov_xy_add.shape) + cov_xy_add / win_size
 
         mu_x = approx_ref / win_dim
         mu_y = approx_dist / win_dim
-        var_x = var_x_cum / win_size
-        var_y = var_y_cum / win_size
-        cov_xy = cov_xy_cum / win_size
 
         l = (2*mu_x*mu_y + C1) / (mu_x**2 + mu_y**2 + C1)
         cs = (2 * cov_xy + C2) / (var_x + var_y + C2)
