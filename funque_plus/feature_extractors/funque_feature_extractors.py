@@ -151,7 +151,7 @@ class YFunquePlusFeatureExtractor(FeatureExtractor):
                         continue
 
                     # SSIM features
-                    _, (ms_ssim_cov_scales, _) = pyr_features.ms_ssim_pyr(pyr_ref, pyr_dis, pool='all')
+                    ms_ssim_cov_scales, _ = pyr_features.ms_ssim_pyr(pyr_ref, pyr_dis, pool='cov')
                     feats_dict[f'ms_ssim_cov_channel_{channel_name}_levels_{self.wavelet_levels}'].append(ms_ssim_cov_scales[-1])
 
                     # DLM features
@@ -228,7 +228,7 @@ class FullScaleYFunquePlusFeatureExtractor(FeatureExtractor):
                         continue
 
                     # SSIM features
-                    _, (ms_ssim_cov_scales, _) = pyr_features.ms_ssim_pyr(pyr_ref, pyr_dis, pool='all')
+                    ms_ssim_cov_scales, _ = pyr_features.ms_ssim_pyr(pyr_ref, pyr_dis, pool='cov')
                     feats_dict[f'ms_ssim_cov_channel_{channel_name}_levels_{self.wavelet_levels}'].append(ms_ssim_cov_scales[-1])
 
                     # DLM features
@@ -330,7 +330,7 @@ class ThreeChannelFunquePlusFeatureExtractor(FeatureExtractor):
                     pyr_dis = pyrs_dis[channel_name]
 
                     # SSIM features
-                    _, (ms_ssim_cov_scales, _) = pyr_features.ms_ssim_pyr(pyr_ref, pyr_dis, pool='all')
+                    ms_ssim_cov_scales, _ = pyr_features.ms_ssim_pyr(pyr_ref, pyr_dis, pool='cov')
                     feats_dict[f'ms_ssim_cov_channel_{channel_name}_levels_{self.wavelet_levels}'].append(ms_ssim_cov_scales[-1])
 
                     # DLM features
