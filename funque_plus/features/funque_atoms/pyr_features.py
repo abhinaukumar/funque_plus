@@ -277,31 +277,43 @@ def ms_ssim_pyr(pyr_ref, pyr_dist, max_val=1, K1=0.01, K2=0.03, pool='cov', full
         cs_mean_scales[lev] = np.mean(cs)
         l_cov_scales[lev] = np.std(l) / l_mean_scales[lev]
         cs_cov_scales[lev] = np.std(cs) / cs_mean_scales[lev]
+        l_mink_scales[lev] = 1 - np.mean((1 - l)**3)**(1.0/3)
+        cs_mink_scales[lev] = 1 - np.mean((1 - cs)**3)**(1.0/3)
         ssim_mean_scales[lev] = np.mean(ssim_map)
         ssim_cov_scales[lev] = np.std(ssim_map) / ssim_mean_scales[lev]
-
-    if pool != 'cov':
-        ms_ssim_mean_scales = np.concatenate([np.array([1]), np.cumprod(cs_mean_scales[:-1] ** exps[:n_levels-1])]) * (ssim_mean_scales ** exps[:n_levels])
-    if pool != 'mean':
-        ms_ssim_cov_scales = np.concatenate([np.array([1]), np.cumprod(cs_cov_scales[:-1] ** exps[:n_levels-1])]) * (ssim_cov_scales ** exps[:n_levels])
+        ssim_mink_scales[lev] = 1 - np.mean((1 - ssim_map)**3)**(1.0/3)
+    
+    if pool in ['mean', 'all']:
+        ms_ssim_mean_scales = np.concatenate([np.array([1]), np.cumprod(np.sign(cs_mean_scales[:-1]) * np.abs(cs_mean_scales[:-1]) ** exps[:n_levels-1])]) * (np.sign(ssim_mean_scales) * np.abs(ssim_mean_scales) ** exps[:n_levels])
+    if pool in ['cov', 'all']:
+        ms_ssim_cov_scales = np.concatenate([np.array([1]), np.cumprod(np.sign(cs_cov_scales[:-1]) * np.abs(cs_cov_scales[:-1]) ** exps[:n_levels-1])]) * (np.sign(ssim_cov_scales) * np.abs(ssim_cov_scales) ** exps[:n_levels])
+    if pool in ['mink', 'all']:
+        ms_ssim_mink_scales = np.concatenate([np.array([1]), np.cumprod(np.sign(cs_mink_scales[:-1]) * np.abs(cs_mink_scales[:-1]) ** exps[:n_levels-1])]) * (np.sign(ssim_mink_scales) * np.abs(ssim_mink_scales) ** exps[:n_levels])
 
     ret_mean = tuple()
     ret_cov = tuple()
-    if pool != 'cov':
+    ret_mink = tuple()
+    if pool in ['mean', 'all']:
         ret_mean = ret_mean + (ms_ssim_mean_scales, ssim_mean_scales)
         if full:
             ret_mean = ret_mean + (l_mean_scales, cs_mean_scales)
-    if pool != 'mean':
+    if pool in ['cov', 'all']:
         ret_cov = ret_cov + (ms_ssim_cov_scales, ssim_cov_scales)
         if full:
             ret_cov = ret_cov + (l_cov_scales, cs_cov_scales)
+    if pool in ['mink', 'all']:
+        ret_mink = ret_mink + (ms_ssim_mink_scales, ssim_mink_scales)
+        if full:
+            ret_mink = ret_mink + (l_mink_scales, cs_mink_scales)
 
     if pool == 'mean':
         return ret_mean
     elif pool == 'cov':
         return ret_cov
+    elif pool == 'mink':
+        return ret_mink
     elif pool == 'all':
-        return (ret_mean, ret_cov)
+        return (ret_mean, ret_cov, ret_mink)
 
 
 def strred_pyr(pyr_ref, pyr_dist, prev_pyr_ref, prev_pyr_dist, block_size=3, single=False, full=False):
