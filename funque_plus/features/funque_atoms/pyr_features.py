@@ -244,6 +244,9 @@ def ms_ssim_pyr(pyr_ref, pyr_dist, max_val=1, K1=0.01, K2=0.03, pool='cov', full
     l_cov_scales = np.zeros((n_levels,))
     cs_cov_scales = np.zeros((n_levels,))
     ssim_cov_scales = np.zeros((n_levels,))
+    l_mink_scales = np.zeros((n_levels,))
+    cs_mink_scales = np.zeros((n_levels,))
+    ssim_mink_scales = np.zeros((n_levels,))
 
     C1 = (K1*max_val)**2
     C2 = (K2*max_val)**2
