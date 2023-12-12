@@ -500,6 +500,7 @@ class VmafFeatureExtractor(FeatureExtractor):
                 standard=asset_dict['dis_standard'],
                 width=asset_dict['width'], height=asset_dict['height']
             ) as v_dis:
+                y_ref_prev = None
                 for frame_ind, (frame_ref, frame_dis) in enumerate(zip(v_ref, v_dis)):
                     if frame_ind % sample_interval:
                         y_ref_prev = frame_ref.yuv[..., 0]
@@ -528,7 +529,10 @@ class VmafFeatureExtractor(FeatureExtractor):
                     feats_dict[f'dlm_channel_y'].append(vmaf_features.dlm(frame_ref.yuv[..., 0], frame_dis.yuv[..., 0]))
 
                     # Motion feature
-                    feats_dict[f'motion_channel_y'].append(vmaf_features.motion(frame_ref.yuv[..., 0], y_ref_prev, self.vif_filters[2]))
+                    if y_ref_prev is not None:
+                        feats_dict[f'motion_channel_y'].append(vmaf_features.motion(frame_ref.yuv[..., 0], y_ref_prev, self.vif_filters[2]))
+                    else:
+                        feats_dict[f'motion_channel_y'].append(0)
 
                     y_ref_prev = frame_ref.yuv[..., 0]
 
