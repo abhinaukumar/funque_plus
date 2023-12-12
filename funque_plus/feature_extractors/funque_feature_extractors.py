@@ -553,3 +553,77 @@ class FullScaleThreeChannelFunquePlusFeatureExtractor(FeatureExtractor):
         feats = np.array(list(feats_dict.values())).T
         print(f'Processed {asset_dict["dis_path"]}')
         return self._to_result(asset_dict, feats, list(feats_dict.keys()))
+
+
+class VmafLikeFeatureExtractor(FeatureExtractor):
+    '''
+    A feature extractor that implements VMAF using FUNQUE features.
+    '''
+    NAME = 'VMAF_Like_fex'
+    VERSION = '1.0'
+
+    def __init__(self, use_cache: bool = True, sample_rate: Optional[int] = None) -> None:
+        super().__init__(use_cache, sample_rate)
+        self.wavelet_levels = 4
+        self.csf = 'watson'
+        self.wavelet = 'haar'
+        self.feat_names = \
+            [f'dlm_channel_y_levels_{self.wavelet_levels}', f'motion_channel_y_scale_{self.wavelet_levels}'] + \
+            [f'vif_approx_scalar_channel_y_scale_{scale+1}' for scale in range(self.wavelet_levels)]
+
+    def _run_on_asset(self, asset_dict: Dict[str, Any]) -> Result:
+        sample_interval = self._get_sample_interval(asset_dict)
+        feats_dict = {key: [] for key in self.feat_names}
+
+        channel_names = ['y', 'u', 'v']
+        channel_name = 'y'
+        channel_ind = 0
+
+        with Video(
+            asset_dict['ref_path'], mode='r',
+            standard=asset_dict['ref_standard'],
+            width=asset_dict['width'], height=asset_dict['height']
+        ) as v_ref:
+            with Video(
+                asset_dict['dis_path'], mode='r',
+                standard=asset_dict['dis_standard'],
+                width=asset_dict['width'], height=asset_dict['height']
+            ) as v_dis:
+                for frame_ind, (frame_ref, frame_dis) in enumerate(zip(v_ref, v_dis)):
+                    y_ref = frame_ref.yuv[..., 0].astype('float64')/asset_dict['ref_standard'].range
+                    y_dis = frame_dis.yuv[..., 0].astype('float64')/asset_dict['dis_standard'].range
+
+                    channel_ref = y_ref
+                    channel_dis = y_dis
+
+                    [pyr_ref, pyr_dis] = [pyr_features.custom_wavedec2(channel, self.wavelet, 'periodization', self.wavelet_levels) for channel in (channel_ref, channel_dis)]
+                    [pyr_ref, pyr_dis] = [filter_utils.filter_pyr(pyr, self.csf, channel=channel_ind) for pyr in (pyr_ref, pyr_dis)]
+
+                    if frame_ind % sample_interval:
+                        prev_pyr_ref = pyr_ref.copy()
+                        continue
+
+                    # Scalar VIF features
+                    vif_approx_scales = [vif_utils.vif_spatial(approx_ref, approx_dis, sigma_nsq=5, k=9, full=False) for approx_ref, approx_dis in zip(pyr_ref[0], pyr_dis[0])]
+                    for lev, vif_approx_scale in enumerate(vif_approx_scales):
+                        feats_dict[f'vif_approx_scalar_channel_{channel_name}_scale_{lev+1}'].append(vif_approx_scale)
+
+                    # DLM features
+                    dlm_val = pyr_features.dlm_pyr(pyr_ref, pyr_dis, csf=None)
+                    feats_dict[f'dlm_channel_{channel_name}_levels_{self.wavelet_levels}'].append(dlm_val)
+
+                    # MAD features
+                    if frame_ind != 0:
+                        subband = pyr_ref[0][0]
+                        prev_subband = prev_pyr_ref[0][0]
+                        motion_val = np.mean(np.abs(subband - prev_subband))
+                    else:
+                        motion_val = 0
+
+                    feats_dict[f'motion_channel_{channel_name}_scale_{self.wavelet_levels}'].append(motion_val)
+
+                    prev_pyr_ref = pyr_ref
+
+        feats = np.array(list(feats_dict.values())).T
+        print(f'Processed {asset_dict["dis_path"]}')
+        return self._to_result(asset_dict, feats, list(feats_dict.keys()))
