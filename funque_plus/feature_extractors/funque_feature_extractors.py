@@ -44,16 +44,25 @@ class FunqueFeatureExtractor(FeatureExtractor):
                 standard=asset_dict['dis_standard'],
                 width=asset_dict['width'], height=asset_dict['height']
             ) as v_dis:
-                w_crop = (v_ref.width >> (self.wavelet_levels+self.vif_extra_levels+1)) << (self.wavelet_levels+self.vif_extra_levels)
-                h_crop = (v_ref.height >> (self.wavelet_levels+self.vif_extra_levels+1)) << (self.wavelet_levels+self.vif_extra_levels)
+                # w_crop = (v_ref.width >> (self.wavelet_levels+self.vif_extra_levels+1)) << (self.wavelet_levels+self.vif_extra_levels)
+                # h_crop = (v_ref.height >> (self.wavelet_levels+self.vif_extra_levels+1)) << (self.wavelet_levels+self.vif_extra_levels)
+
+                w_pad = (((v_ref.width//2) + 2**(self.wavelet_levels+self.vif_extra_levels)-1) >> (self.wavelet_levels+self.vif_extra_levels)) << (self.wavelet_levels+self.vif_extra_levels)
+                h_pad = (((v_ref.height//2) + 2**(self.wavelet_levels+self.vif_extra_levels)-1) >> (self.wavelet_levels+self.vif_extra_levels)) << (self.wavelet_levels+self.vif_extra_levels)
 
                 for frame_ind, (frame_ref, frame_dis) in enumerate(zip(v_ref, v_dis)):
                     y_ref = cv2.resize(frame_ref.yuv[..., 0].astype(v_ref.standard.dtype), (frame_ref.width//2, frame_ref.height//2), interpolation=cv2.INTER_CUBIC).astype('float64')/asset_dict['ref_standard'].range
                     y_dis = cv2.resize(frame_dis.yuv[..., 0].astype(v_dis.standard.dtype), (frame_dis.width//2, frame_dis.height//2), interpolation=cv2.INTER_CUBIC).astype('float64')/asset_dict['dis_standard'].range
 
-                    # Cropping to a power of 2 to avoid problems in WD-SSIM
-                    y_ref = y_ref[:h_crop, :w_crop]
-                    y_dis = y_dis[:h_crop, :w_crop]
+                    # # Cropping to a power of 2 to avoid problems in WD-SSIM
+                    # y_ref = y_ref[:h_crop, :w_crop]
+                    # y_dis = y_dis[:h_crop, :w_crop]
+
+                    # Padding to a power of 2 to avoid problems in SSIM
+                    h_pad_amt = h_pad - y_ref.shape[0]
+                    w_pad_amt = w_pad - y_ref.shape[1]
+                    y_ref = np.pad(y_ref, [(h_pad_amt//2, h_pad_amt-h_pad_amt//2), (w_pad_amt//2, w_pad_amt-w_pad_amt//2)], mode='reflect')
+                    y_dis = np.pad(y_dis, [(h_pad_amt//2, h_pad_amt-h_pad_amt//2), (w_pad_amt//2, w_pad_amt-w_pad_amt//2)], mode='reflect')
 
                     channel_ref = y_ref
                     channel_dis = y_dis
@@ -130,16 +139,26 @@ class YFunquePlusFeatureExtractor(FeatureExtractor):
                 standard=asset_dict['dis_standard'],
                 width=asset_dict['width'], height=asset_dict['height']
             ) as v_dis:
-                w_crop = (v_ref.width >> (self.wavelet_levels+1)) << self.wavelet_levels
-                h_crop = (v_ref.height >> (self.wavelet_levels+1)) << self.wavelet_levels
+                # w_crop = (v_ref.width >> (self.wavelet_levels+1)) << self.wavelet_levels
+                # h_crop = (v_ref.height >> (self.wavelet_levels+1)) << self.wavelet_levels
+
+                w_pad = (((v_ref.width//2) + 2**self.wavelet_levels-1) >> self.wavelet_levels) << self.wavelet_levels
+                h_pad = (((v_ref.height//2) + 2**self.wavelet_levels-1) >> self.wavelet_levels) << self.wavelet_levels
 
                 for frame_ind, (frame_ref, frame_dis) in enumerate(zip(v_ref, v_dis)):
                     y_ref = cv2.resize(frame_ref.yuv[..., 0].astype(v_ref.standard.dtype), (frame_ref.width//2, frame_ref.height//2), interpolation=cv2.INTER_CUBIC).astype('float64') / asset_dict['ref_standard'].range
                     y_dis = cv2.resize(frame_dis.yuv[..., 0].astype(v_dis.standard.dtype), (frame_dis.width//2, frame_dis.height//2), interpolation=cv2.INTER_CUBIC).astype('float64') / asset_dict['dis_standard'].range
 
-                    # Cropping to a power of 2 to avoid problems in SSIM
-                    y_ref = y_ref[:h_crop, :w_crop]
-                    y_dis = y_dis[:h_crop, :w_crop]
+                    # # Cropping to a power of 2 to avoid problems in SSIM
+                    # y_ref = y_ref[:h_crop, :w_crop]
+                    # y_dis = y_dis[:h_crop, :w_crop]
+
+                    # Padding to a power of 2 to avoid problems in SSIM
+                    h_pad_amt = h_pad - y_ref.shape[0]
+                    w_pad_amt = w_pad - y_ref.shape[1]
+                    y_ref = np.pad(y_ref, [(h_pad_amt//2, h_pad_amt-h_pad_amt//2), (w_pad_amt//2, w_pad_amt-w_pad_amt//2)], mode='reflect')
+                    y_dis = np.pad(y_dis, [(h_pad_amt//2, h_pad_amt-h_pad_amt//2), (w_pad_amt//2, w_pad_amt-w_pad_amt//2)], mode='reflect')
+                    print(y_ref.shape, y_dis.shape, v_ref.width, v_ref.height, self.wavelet_levels)
 
                     channel_ref = y_ref
                     channel_dis = y_dis
@@ -206,16 +225,26 @@ class FullScaleYFunquePlusFeatureExtractor(FeatureExtractor):
                 standard=asset_dict['dis_standard'],
                 width=asset_dict['width'], height=asset_dict['height']
             ) as v_dis:
-                w_crop = (v_ref.width >> self.wavelet_levels) << self.wavelet_levels
-                h_crop = (v_ref.height >> self.wavelet_levels) << self.wavelet_levels
+                # w_crop = (v_ref.width >> self.wavelet_levels) << self.wavelet_levels
+                # h_crop = (v_ref.height >> self.wavelet_levels) << self.wavelet_levels
+
+                w_pad = ((v_ref.width + 2**self.wavelet_levels-1) >> self.wavelet_levels) << self.wavelet_levels
+                h_pad = ((v_ref.height + 2**self.wavelet_levels-1) >> self.wavelet_levels) << self.wavelet_levels
 
                 for frame_ind, (frame_ref, frame_dis) in enumerate(zip(v_ref, v_dis)):
                     y_ref = frame_ref.yuv[..., 0] / asset_dict['ref_standard'].range
                     y_dis = frame_dis.yuv[..., 0] / asset_dict['dis_standard'].range
 
-                    # Cropping to a power of 2 to avoid problems in SSIM
-                    y_ref = y_ref[:h_crop, :w_crop]
-                    y_dis = y_dis[:h_crop, :w_crop]
+                    # # Cropping to a power of 2 to avoid problems in SSIM
+                    # y_ref = y_ref[:h_crop, :w_crop]
+                    # y_dis = y_dis[:h_crop, :w_crop]
+
+                    # Padding to a power of 2 to avoid problems in SSIM
+                    h_pad_amt = h_pad - y_ref.shape[0]
+                    w_pad_amt = w_pad - y_ref.shape[1]
+                    y_ref = np.pad(y_ref, [(h_pad_amt//2, h_pad_amt-h_pad_amt//2), (w_pad_amt//2, w_pad_amt-w_pad_amt//2)], mode='reflect')
+                    y_dis = np.pad(y_dis, [(h_pad_amt//2, h_pad_amt-h_pad_amt//2), (w_pad_amt//2, w_pad_amt-w_pad_amt//2)], mode='reflect')
+                    print(y_ref.shape, y_dis.shape, v_ref.width, v_ref.height, self.wavelet_levels)
 
                     channel_ref = y_ref
                     channel_dis = y_dis
@@ -300,8 +329,11 @@ class ThreeChannelFunquePlusFeatureExtractor(FeatureExtractor):
                 standard=asset_dict['dis_standard'],
                 width=asset_dict['width'], height=asset_dict['height']
             ) as v_dis:
-                w_crop = (v_ref.width >> (self.wavelet_levels+1)) << self.wavelet_levels
-                h_crop = (v_ref.height >> (self.wavelet_levels+1)) << self.wavelet_levels
+                # w_crop = (v_ref.width >> (self.wavelet_levels+1)) << self.wavelet_levels
+                # h_crop = (v_ref.height >> (self.wavelet_levels+1)) << self.wavelet_levels
+
+                w_pad = (((v_ref.width//2) + 2**self.wavelet_levels-1) >> self.wavelet_levels) << self.wavelet_levels
+                h_pad = (((v_ref.height//2) + 2**self.wavelet_levels-1) >> self.wavelet_levels) << self.wavelet_levels
 
                 pyrs_ref = {}
                 pyrs_dis = {}
@@ -310,8 +342,15 @@ class ThreeChannelFunquePlusFeatureExtractor(FeatureExtractor):
                         channel_ref = cv2.resize(frame_ref.yuv[..., channel_ind].astype(v_ref.standard.dtype), (frame_ref.width//2, frame_ref.height//2), interpolation=cv2.INTER_CUBIC) / asset_dict['ref_standard'].range
                         channel_dis = cv2.resize(frame_dis.yuv[..., channel_ind].astype(v_dis.standard.dtype), (frame_dis.width//2, frame_dis.height//2), interpolation=cv2.INTER_CUBIC) / asset_dict['dis_standard'].range
 
-                        channel_ref = channel_ref[:h_crop, :w_crop]
-                        channel_dis = channel_dis[:h_crop, :w_crop]
+                        # channel_ref = channel_ref[:h_crop, :w_crop]
+                        # channel_dis = channel_dis[:h_crop, :w_crop]
+
+                        # Padding to a power of 2 to avoid problems in SSIM
+                        h_pad_amt = h_pad - channel_ref.shape[0]
+                        w_pad_amt = w_pad - channel_ref.shape[1]
+                        channel_ref = np.pad(channel_ref, [(h_pad_amt//2, h_pad_amt-h_pad_amt//2), (w_pad_amt//2, w_pad_amt-w_pad_amt//2)], mode='reflect')
+                        channel_dis = np.pad(channel_dis, [(h_pad_amt//2, h_pad_amt-h_pad_amt//2), (w_pad_amt//2, w_pad_amt-w_pad_amt//2)], mode='reflect')
+                        print(channel_ref.shape, channel_dis.shape, v_ref.width, v_ref.height, self.wavelet_levels)
 
                         [pyr_ref, pyr_dis] = [pyr_features.custom_wavedec2(channel, self.wavelet, 'periodization', self.wavelet_levels) for channel in (channel_ref, channel_dis)]
                         [pyr_ref, pyr_dis] = [filter_utils.filter_pyr(pyr, self.csf, channel=channel_ind) for pyr in (pyr_ref, pyr_dis)]
@@ -413,8 +452,11 @@ class FullScaleThreeChannelFunquePlusFeatureExtractor(FeatureExtractor):
                 standard=asset_dict['dis_standard'],
                 width=asset_dict['width'], height=asset_dict['height']
             ) as v_dis:
-                w_crop = (v_ref.width >> self.wavelet_levels) << self.wavelet_levels
-                h_crop = (v_ref.height >> self.wavelet_levels) << self.wavelet_levels
+                # w_crop = (v_ref.width >> self.wavelet_levels) << self.wavelet_levels
+                # h_crop = (v_ref.height >> self.wavelet_levels) << self.wavelet_levels
+
+                w_pad = ((v_ref.width + 2**self.wavelet_levels-1) >> self.wavelet_levels) << self.wavelet_levels
+                h_pad = ((v_ref.height + 2**self.wavelet_levels-1) >> self.wavelet_levels) << self.wavelet_levels
 
                 pyrs_ref = {}
                 pyrs_dis = {}
@@ -423,8 +465,15 @@ class FullScaleThreeChannelFunquePlusFeatureExtractor(FeatureExtractor):
                         channel_ref = frame_ref.yuv[..., channel_ind] / asset_dict['ref_standard'].range
                         channel_dis = frame_dis.yuv[..., channel_ind] / asset_dict['dis_standard'].range
 
-                        channel_ref = channel_ref[:h_crop, :w_crop]
-                        channel_dis = channel_dis[:h_crop, :w_crop]
+                        # channel_ref = channel_ref[:h_crop, :w_crop]
+                        # channel_dis = channel_dis[:h_crop, :w_crop]
+
+                        # Padding to a power of 2 to avoid problems in SSIM
+                        h_pad_amt = h_pad - channel_ref.shape[0]
+                        w_pad_amt = w_pad - channel_ref.shape[1]
+                        channel_ref = np.pad(channel_ref, [(h_pad_amt//2, h_pad_amt-h_pad_amt//2), (w_pad_amt//2, w_pad_amt-w_pad_amt//2)], mode='reflect')
+                        channel_dis = np.pad(channel_dis, [(h_pad_amt//2, h_pad_amt-h_pad_amt//2), (w_pad_amt//2, w_pad_amt-w_pad_amt//2)], mode='reflect')
+                        print(channel_ref.shape, channel_dis.shape, v_ref.width, v_ref.height, self.wavelet_levels)
 
                         [pyr_ref, pyr_dis] = [pyr_features.custom_wavedec2(channel, self.wavelet, 'periodization', self.wavelet_levels) for channel in (channel_ref, channel_dis)]
                         [pyr_ref, pyr_dis] = [filter_utils.filter_pyr(pyr, self.csf, channel=channel_ind) for pyr in (pyr_ref, pyr_dis)]
