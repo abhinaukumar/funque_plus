@@ -20,6 +20,7 @@ class FunqueFeatureExtractor(FeatureExtractor):
         super().__init__(use_cache, sample_rate)
         self.wavelet_levels = 1
         self.vif_extra_levels = 1
+        self.csf = 'ngan_spat'
         self.wavelet = 'haar'
         self.feat_names = \
             [f'ssim_cov_channel_y_levels_{self.wavelet_levels}', f'dlm_channel_y_scale_{self.wavelet_levels}', f'motion_channel_y_scale_{self.wavelet_levels}'] + \
