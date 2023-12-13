@@ -23,7 +23,7 @@ def custom_wavedec2(data, wavelet, mode='symmetric', level=None, axes=(-2, -1)):
     return (approxs, details)
 
 
-def dlm_pyr(pyr_ref, pyr_dist, border_size=0.2, csf='li'):
+def dlm_pyr(pyr_ref, pyr_dist, border_size=0.1, csf='li'):
     # Pyramids are assumed to have the structure
     # ([A1, ..., An], [(H1, V1, D1), ..., (Hn, Vn, Dn)])
     _, details_ref = pyr_ref
@@ -65,7 +65,7 @@ def dlm_pyr(pyr_ref, pyr_dist, border_size=0.2, csf='li'):
     return dlm
 
 
-def ms_dlm_pyr(pyr_ref, pyr_dist, border_size=0.2, full=False, csf='li'):
+def ms_dlm_pyr(pyr_ref, pyr_dist, border_size=0.1, full=False, csf='li'):
     # Pyramids are assumed to have the structure
     # ([A1, ..., An], [(H1, V1, D1), ..., (Hn, Vn, Dn)])
     _, details_ref = pyr_ref
