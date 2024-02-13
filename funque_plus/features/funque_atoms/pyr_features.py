@@ -5,7 +5,7 @@ from .vif_utils import vif_spatial, vif_channel_est
 from .gsm_utils import gsm_model, im2col
 from .filter_utils import filter_pyr
 from .rred_utils import rred_entropies_and_scales
-
+from .rred_utils import rred_entropies_and_scales_low_dynamic_range
 
 from pywt import dwt2
 
@@ -402,6 +402,55 @@ def strred_hv_pyr(pyr_ref, pyr_dist, prev_pyr_ref, prev_pyr_dist, block_size=3, 
         temp_gsm_ref_details = [tuple([rred_entropies_and_scales(subband - prev_subband, block_size) for subband, prev_subband in zip(level, prev_level)])
                                 for level, prev_level in zip(details_ref, prev_details_ref)]
         temp_gsm_dist_details = [tuple([rred_entropies_and_scales(subband - prev_subband, block_size) for subband, prev_subband in zip(level, prev_level)])
+                                 for level, prev_level in zip(details_dist, prev_details_dist)]
+
+    agg = lambda x: np.abs(np.mean(x)) if single else np.mean(np.abs(x))
+
+    spat_vals = np.array([
+        np.mean([agg(scale_ref * entropy_ref - scale_dist * entropy_dist) for (entropy_ref, scale_ref), (entropy_dist, scale_dist) in zip(level_ref, level_dist)])
+        for level_ref, level_dist in zip(spat_gsm_ref_details, spat_gsm_dist_details)
+    ])
+
+    if compute_temporal:
+        temp_vals = np.array([
+            np.mean([
+                agg(spat_scale_ref * temp_scale_ref * entropy_ref - spat_scale_dist * temp_scale_dist * entropy_dist)
+                for (_, spat_scale_ref), (_, spat_scale_dist), (entropy_ref, temp_scale_ref), (entropy_dist, temp_scale_dist)
+                in zip(spat_level_ref, spat_level_dist, temp_level_ref, temp_level_dist)
+            ])
+            for spat_level_ref, spat_level_dist, temp_level_ref, temp_level_dist in zip(spat_gsm_ref_details, spat_gsm_dist_details, temp_gsm_ref_details, temp_gsm_dist_details)
+        ])
+        spat_temp_vals = spat_vals * temp_vals
+    else:
+        temp_vals = np.zeros_like(spat_vals)
+        spat_temp_vals = np.zeros_like(spat_vals)
+
+    norm_factors = np.arange(1, n_levels+1)
+    srred_vals = np.cumsum(spat_vals) / norm_factors
+    trred_vals = np.cumsum(temp_vals) / norm_factors
+    strred_vals = np.cumsum(spat_temp_vals) / norm_factors
+
+    if not full:
+        return (srred_vals, trred_vals, strred_vals)
+    else:
+        return (srred_vals, trred_vals, strred_vals), (spat_vals, temp_vals, spat_temp_vals)
+    
+def strred_hv_pyr_low_dynamic_range(pyr_ref, pyr_dist, prev_pyr_ref, prev_pyr_dist, block_size=3, single=False, full=False):
+    # Pyramids are assumed to have the structure
+    # ([A1, ..., An], [(H1, V1, D1), ..., (Hn, Vn, Dn)])
+    approxs_ref, details_ref = pyr_ref
+    approxs_dist, details_dist = pyr_dist
+    assert len(details_ref) == len(details_dist), 'Both wavelet pyramids must be of the same height'
+    n_levels = len(details_ref)
+    spat_gsm_ref_details = [tuple([rred_entropies_and_scales_low_dynamic_range(subband, block_size) for subband in level]) for level in details_ref]
+    spat_gsm_dist_details = [tuple([rred_entropies_and_scales_low_dynamic_range(subband, block_size) for subband in level]) for level in details_dist]
+    compute_temporal = (prev_pyr_ref is not None and prev_pyr_dist is not None)
+    if compute_temporal:
+        prev_approxs_ref, prev_details_ref = prev_pyr_ref
+        prev_approxs_dist, prev_details_dist = prev_pyr_dist
+        temp_gsm_ref_details = [tuple([rred_entropies_and_scales_low_dynamic_range(subband - prev_subband, block_size) for subband, prev_subband in zip(level, prev_level)])
+                                for level, prev_level in zip(details_ref, prev_details_ref)]
+        temp_gsm_dist_details = [tuple([rred_entropies_and_scales_low_dynamic_range(subband - prev_subband, block_size) for subband, prev_subband in zip(level, prev_level)])
                                  for level, prev_level in zip(details_dist, prev_details_dist)]
 
     agg = lambda x: np.abs(np.mean(x)) if single else np.mean(np.abs(x))
