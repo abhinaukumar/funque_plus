@@ -205,7 +205,7 @@ class FullScaleYFunquePlusFeatureExtractor(FeatureExtractor):
         self.wavelet_levels = 2
         self.csf = 'nadenau_spat'
         self.wavelet = 'haar'
-        self.feat_names = [f'ms_ssim_cov_channel_y_levels_{self.wavelet_levels}', f'dlm_channel_y_scale_{self.wavelet_levels}', f'strred_scalar_channel_y_levels_{self.wavelet_levels}', f'mad_dis_channel_y_scale_{self.wavelet_levels}', f'sai_diff_channel_y_scale_{self.wavelet_levels}']
+        self.feat_names = [f'ms_ssim_cov_channel_y_levels_{self.wavelet_levels}', f'dlm_channel_y_scale_{self.wavelet_levels}', f'strred_scalar_channel_y_levels_{self.wavelet_levels}', f'strred_ldr_scalar_channel_y_levels_{self.wavelet_levels}', f'mad_dis_channel_y_scale_{self.wavelet_levels}', f'sai_diff_channel_y_scale_{self.wavelet_levels}']
 
     def _run_on_asset(self, asset_dict: Dict[str, Any]) -> Result:
         sample_interval = self._get_sample_interval(asset_dict)
@@ -271,12 +271,14 @@ class FullScaleYFunquePlusFeatureExtractor(FeatureExtractor):
 
                         # STRRED features
                         (_, _, strred_scales) = pyr_features.strred_hv_pyr(pyr_ref, pyr_dis, prev_pyr_ref, prev_pyr_dis, block_size=1)
+                        (_, _, strred_ldr_scales) = pyr_features.strred_hv_pyr_low_dynamic_range(pyr_ref, pyr_dis, prev_pyr_ref, prev_pyr_dis, block_size=1)
                     else:
                         motion_val = 0 
                         strred_scales = [0]*self.wavelet_levels
 
                     feats_dict[f'mad_dis_channel_{channel_name}_scale_{self.wavelet_levels}'].append(motion_val)
                     feats_dict[f'strred_scalar_channel_{channel_name}_levels_{self.wavelet_levels}'].append(strred_scales[-1])
+                    feats_dict[f'strred_ldr_scalar_channel_{channel_name}_levels_{self.wavelet_levels}'].append(strred_ldr_scales[-1])
 
                     # TLVQM-like features 
                     # Spatial activity - swap Haar H, V for Sobel H, V
